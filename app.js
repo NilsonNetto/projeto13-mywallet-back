@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import joi from "joi";
 import { v4 as uuid } from 'uuid';
 import dotenv from "dotenv";
+import dayjs from "dayjs";
 dotenv.config();
 
 const server = express();
@@ -32,6 +33,11 @@ const registerSchema = joi.object({
   password: joi.string().min(3).required().trim()
 });
 
+const transactionSchema = joi.object({
+  description: joi.string().min(3).required().trim(),
+  price: joi.number().required()
+});
+
 server.post('/login', async (req, res) => {
   const loginData = req.body;
 
@@ -50,7 +56,7 @@ server.post('/login', async (req, res) => {
 
     if (user && passwordValidation) {
       const token = uuid();
-      await db.collection('sessions').insertOne({ userID: user._id, token });
+      await db.collection('sessions').insertOne({ userId: user._id, token });
       return res.send(token);
     } else {
       return res.status(400).send('Email ou senha incorretos');
@@ -85,6 +91,51 @@ server.post('/register', async (req, res) => {
 
 });
 
+server.post('/transactions', async (req, res) => {
+  const { authorization } = req.headers;
+  const { description, price } = req.body;
+
+  const token = authorization?.replace('Bearer ', '');
+
+  if (!token) {
+    return res.sendStatus(401);
+  }
+
+  try {
+    const session = await db.collection('sessions').findOne({ token });
+
+    if (!session) {
+      return res.sendStatus(401);
+    }
+
+    const user = await db.collection('users').findOne({ _id: session.userId });
+
+    const validation = transactionSchema.validate(req.body, abortEarly = false);
+
+    if (validation.error) {
+      const errors = validation.error.details.map(detail => detail.message);
+      console.log(errors);
+      return res.status(422).send(errors);
+    }
+
+    const transaction = {
+      userId: user._id,
+      description,
+      price,
+      date: dayjs().format('DD/MM')
+    };
+
+    await db.collection('transactions').insertOne(transaction);
+    res.sendStatus(201);
+  } catch (error) {
+    console.log(error);
+    res.sendStatus(500);
+  }
+});
+
+/* server.get('/transactions', (res, res) => {
+
+}); */
 
 server.listen(port, () => {
   console.log(`Listen on por ${port}`);
