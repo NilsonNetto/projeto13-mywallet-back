@@ -38,6 +38,29 @@ const transactionSchema = joi.object({
   price: joi.number().required()
 });
 
+server.post('/register', async (req, res) => {
+  const { name, email, password } = req.body;
+
+  const validation = registerSchema.validate(req.body, { abortEarly: false });
+
+  if (validation.error) {
+    const errors = validation.error.details.map(detail => detail.message);
+    console.log(errors);
+    return res.status(422).send(errors);
+  }
+
+  const passwordHash = bcrypt.hashSync(password, 13);
+
+  try {
+    await db.collection('users').insertOne({ name, email, passwordHash });
+    res.sendStatus(201);
+  } catch (error) {
+    console.log(error);
+    res.sendStatus(500);
+  }
+
+});
+
 server.post('/login', async (req, res) => {
   const loginData = req.body;
 
@@ -68,29 +91,6 @@ server.post('/login', async (req, res) => {
 
 });
 
-server.post('/register', async (req, res) => {
-  const { name, email, password } = req.body;
-
-  const validation = registerSchema.validate(req.body, { abortEarly: false });
-
-  if (validation.error) {
-    const errors = validation.error.details.map(detail => detail.message);
-    console.log(errors);
-    return res.status(422).send(errors);
-  }
-
-  const passwordHash = bcrypt.hashSync(password, 13);
-
-  try {
-    await db.collection('users').insertOne({ name, email, passwordHash });
-    res.sendStatus(201);
-  } catch (error) {
-    console.log(error);
-    res.sendStatus(500);
-  }
-
-});
-
 server.post('/transactions', async (req, res) => {
   const { authorization } = req.headers;
   const { description, price } = req.body;
@@ -108,9 +108,7 @@ server.post('/transactions', async (req, res) => {
       return res.sendStatus(401);
     }
 
-    const user = await db.collection('users').findOne({ _id: session.userId });
-
-    const validation = transactionSchema.validate(req.body, abortEarly = false);
+    const validation = transactionSchema.validate(req.body, { abortEarly: false });
 
     if (validation.error) {
       const errors = validation.error.details.map(detail => detail.message);
@@ -119,7 +117,7 @@ server.post('/transactions', async (req, res) => {
     }
 
     const transaction = {
-      userId: user._id,
+      userId: session.userId,
       description,
       price,
       date: dayjs().format('DD/MM')
@@ -133,9 +131,29 @@ server.post('/transactions', async (req, res) => {
   }
 });
 
-/* server.get('/transactions', (res, res) => {
+server.get('/transactions', async (req, res) => {
+  const { authorization } = req.headers;
 
-}); */
+  const token = authorization?.replace('Bearer ', '');
+
+  if (!token) {
+    return res.sendStatus(401);
+  }
+
+  try {
+    const session = await db.collection('sessions').findOne({ token });
+
+    if (!session) {
+      return res.sendStatus(401);
+    }
+
+    const history = await db.collection('transactions').find({ userId: session.userId }).toArray();
+    res.send(history);
+  } catch (error) {
+    console.log(error);
+    res.sendStatus(500);
+  }
+});
 
 server.listen(port, () => {
   console.log(`Listen on por ${port}`);
