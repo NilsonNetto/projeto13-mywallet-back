@@ -23,16 +23,16 @@ mongoClient.connect().then(() => {
 
 const loginSchema = joi.object({
   email: joi.string().required().trim(),
-  password: joi.string().min(6).required.trim()
+  password: joi.string().min(3).required().trim()
 });
 
 const registerSchema = joi.object({
   name: joi.string().min(5).required().trim(),
   email: joi.string().required().trim(),
-  password: joi.string().min(6).required.trim()
+  password: joi.string().min(3).required().trim()
 });
 
-server.post('/', async (req, res) => {
+server.post('/login', async (req, res) => {
   const loginData = req.body;
 
   const validation = loginSchema.validate(loginData, { abortEarly: false });
@@ -46,11 +46,11 @@ server.post('/', async (req, res) => {
   try {
     const user = await db.collection('users').findOne({ email: loginData.email });
 
-    const passwordValidation = bcrypt.compareSync(user.password, loginData.password);
+    const passwordValidation = bcrypt.compareSync(loginData.password, user.passwordHash);
 
     if (user && passwordValidation) {
       const token = uuid();
-      await db.colletion('sessions').insertOne({ userID: user._id, token });
+      await db.collection('sessions').insertOne({ userID: user._id, token });
       return res.send(token);
     } else {
       return res.status(400).send('Email ou senha incorretos');
