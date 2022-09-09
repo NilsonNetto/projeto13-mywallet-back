@@ -80,7 +80,8 @@ server.post('/login', async (req, res) => {
     if (user && passwordValidation) {
       const token = uuid();
       await db.collection('sessions').insertOne({ userId: user._id, token });
-      return res.send(token);
+      delete user.passwordHash;
+      return res.send({ ...user, token });
     } else {
       return res.status(400).send('Email ou senha incorretos');
     }
@@ -154,6 +155,8 @@ server.get('/transactions', async (req, res) => {
     res.sendStatus(500);
   }
 });
+
+// fazer uma função para excluir as sessions logadas, tipo a cada 30 minutos e sempre que reiniciar a API também
 
 server.listen(port, () => {
   console.log(`Listen on por ${port}`);
