@@ -34,7 +34,8 @@ const registerSchema = joi.object({
 
 const transactionSchema = joi.object({
   description: joi.string().min(3).required().trim(),
-  price: joi.number().required()
+  price: joi.string().required(),
+  type: joi.string().valid('Income', 'Outcome').required()
 });
 
 server.post('/register', async (req, res) => {
@@ -92,7 +93,7 @@ server.post('/login', async (req, res) => {
 
 server.post('/transactions', async (req, res) => {
   const { authorization } = req.headers;
-  const { description, price } = req.body;
+  const { description, price, type } = req.body;
 
   const token = authorization?.replace('Bearer ', '');
 
@@ -119,6 +120,7 @@ server.post('/transactions', async (req, res) => {
       userId: session.userId,
       description,
       price,
+      type,
       date: dayjs().format('DD/MM')
     };
 
@@ -202,7 +204,7 @@ async function removeInactiveSessions() {
   }
 }
 
-setInterval(removeInactiveSessions, 1800000);
+setInterval(removeInactiveSessions, 1810000);
 
 server.listen(port, () => {
   console.log(`Listen on por ${port}`);
