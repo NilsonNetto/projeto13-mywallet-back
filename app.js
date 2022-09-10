@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import { Server } from "http";
 import { MongoClient } from "mongodb";
 import bcrypt from "bcrypt";
 import joi from "joi";
@@ -58,7 +57,6 @@ server.post('/register', async (req, res) => {
     console.log(error);
     res.sendStatus(500);
   }
-
 });
 
 server.post('/login', async (req, res) => {
@@ -81,7 +79,7 @@ server.post('/login', async (req, res) => {
       const token = uuid();
       await db.collection('sessions').insertOne({ userId: user._id, token });
       delete user.passwordHash;
-      return res.send({ ...user, token });
+      return res.send({ ...user, token, loginTime: Date.now() });
     } else {
       return res.status(400).send('Email ou senha incorretos');
     }
@@ -137,6 +135,7 @@ server.get('/transactions', async (req, res) => {
 
   const token = authorization?.replace('Bearer ', '');
 
+  console.log(token);
   if (!token) {
     return res.sendStatus(401);
   }
@@ -156,7 +155,34 @@ server.get('/transactions', async (req, res) => {
   }
 });
 
+server.delete('/logout', async (req, res) => {
+  const { authorization } = req.headers;
+
+  const token = authorization?.replace('Bearer ', '');
+
+  console.log(token);
+  if (!token) {
+    return res.sendStatus(401);
+  }
+
+  try {
+    const session = await db.collection('sessions').findOne({ token });
+
+    if (!session) {
+      return res.sendStatus(401);
+    }
+
+    await db.collection('sessions').remove({ token });
+    res.sendStatus(200);
+  } catch (error) {
+    console.log(error);
+    res.sendStatus(500);
+  }
+});
+
 // fazer uma função para excluir as sessions logadas, tipo a cada 30 minutos e sempre que reiniciar a API também
+
+
 
 server.listen(port, () => {
   console.log(`Listen on por ${port}`);
