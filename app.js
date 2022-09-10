@@ -180,9 +180,29 @@ server.delete('/logout', async (req, res) => {
   }
 });
 
-// fazer uma função para excluir as sessions logadas, tipo a cada 30 minutos e sempre que reiniciar a API também
+async function removeInactiveSessions() {
 
+  try {
+    const allSessions = await db.collection('sessions').find().toArray();
 
+    if (allSessions.length === 0) {
+      return;
+    }
+
+    console.log('Removendo participantes: ', dayjs().format('HH:mm:ss'));
+    allSessions.forEach(async session => {
+      const lastUpdate = Date.now() - session.loginTime;
+
+      if (lastUpdate >= 1800000) {
+        await db.collection('sessions').deleteOne({ _id: ObjectId(session._id) });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+setInterval(removeInactiveSessions, 1800000);
 
 server.listen(port, () => {
   console.log(`Listen on por ${port}`);
