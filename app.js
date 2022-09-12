@@ -37,7 +37,7 @@ async function removeInactiveSessions() {
     console.log(error);
   }
 }
-
+removeInactiveSessions();
 setInterval(removeInactiveSessions, 1810000);
 
 server.listen(port, () => {

@@ -7,13 +7,13 @@ let db = await mongo();
 
 const loginSchema = joi.object({
   email: joi.string().required().trim(),
-  password: joi.string().min(3).required().trim()
+  password: joi.string().min(6).required().trim()
 });
 
 const registerSchema = joi.object({
   name: joi.string().min(5).required().trim(),
   email: joi.string().required().trim(),
-  password: joi.string().min(3).required().trim()
+  password: joi.string().min(6).required().trim()
 });
 
 
@@ -71,22 +71,8 @@ const startSession = async (req, res) => {
 };
 
 const endSession = async (req, res) => {
-  const { authorization } = req.headers;
-
-  const token = authorization?.replace('Bearer ', '');
-
-  if (!token) {
-    return res.sendStatus(401);
-  }
-
   try {
-    const session = await db.collection('sessions').findOne({ token });
-
-    if (!session) {
-      return res.sendStatus(401);
-    }
-
-    await db.collection('sessions').deleteOne({ token });
+    await db.collection('sessions').deleteOne({ token: res.locals.token });
     res.sendStatus(200);
   } catch (error) {
     console.log(error);

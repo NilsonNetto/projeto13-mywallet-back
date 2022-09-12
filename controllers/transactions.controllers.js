@@ -11,22 +11,9 @@ const transactionSchema = joi.object({
 });
 
 const transactionsHistory = async (req, res) => {
-  const { authorization } = req.headers;
-
-  const token = authorization?.replace('Bearer ', '');
-
-  if (!token) {
-    return res.sendStatus(401);
-  }
 
   try {
-    const session = await db.collection('sessions').findOne({ token });
-
-    if (!session) {
-      return res.sendStatus(401);
-    }
-
-    const history = await db.collection('transactions').find({ userId: session.userId }).toArray();
+    const history = await db.collection('transactions').find({ userId: res.locals.userId }).toArray();
     res.send(history);
   } catch (error) {
     console.log(error);
@@ -35,21 +22,9 @@ const transactionsHistory = async (req, res) => {
 };
 
 const newTransaction = async (req, res) => {
-  const { authorization } = req.headers;
   const { description, price, type } = req.body;
 
-  const token = authorization?.replace('Bearer ', '');
-
-  if (!token) {
-    return res.sendStatus(401);
-  }
-
   try {
-    const session = await db.collection('sessions').findOne({ token });
-
-    if (!session) {
-      return res.sendStatus(401);
-    }
 
     const validation = transactionSchema.validate(req.body, { abortEarly: false });
 
@@ -60,7 +35,7 @@ const newTransaction = async (req, res) => {
     }
 
     const transaction = {
-      userId: session.userId,
+      userId: res.locals.userId,
       description,
       price,
       type,
