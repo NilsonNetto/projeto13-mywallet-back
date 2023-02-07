@@ -1,14 +1,16 @@
 import express from "express";
 import cors from "cors";
 import mongo from "./db/db.js";
+import dotenv from "dotenv";
+dotenv.config();
 import authRouter from './routers/auth.routers.js';
 import transactionsRouter from './routers/transactions.routers.js';
 
 const server = express();
-const port = 5000;
+const port = process.env.PORT;
 
-server.use(express.json());
 server.use(cors());
+server.use(express.json());
 
 let db = await mongo();
 
